@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sector Intelligence Hub</title>
+    <title>Sovereign Sector Hub v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono&display=swap');
         
         :root {
+            --accent: #06b6d4; /* Brilliant Blue */
+            --accent-soft: rgba(6, 182, 212, 0.1);
             --bg: #020617;
             --card: #0f172a;
-            --accent: #06b6d4;
-            --accent-alt: #8b5cf6;
         }
 
-        body {
-            background-color: var(--bg);
-            color: #f1f5f9;
+        body { 
+            background-color: var(--bg); 
+            color: #f1f5f9; 
             font-family: 'Inter', sans-serif;
-            scroll-behavior: smooth;
+            overflow-x: hidden;
         }
 
         .mono { font-family: 'JetBrains Mono', monospace; }
@@ -32,256 +32,158 @@
             transition: all 0.3s ease;
         }
 
-        .glass-card:hover {
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
-        }
-
         .chart-container {
             position: relative;
             width: 100%;
             height: 300px;
-            max-height: 400px;
-        }
-
-        .sidebar-nav {
-            height: calc(100vh - 2rem);
-            position: sticky;
-            top: 1rem;
-        }
-
-        .nav-item {
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .nav-item.active {
-            background: rgba(6, 182, 212, 0.1);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .nav-item:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.05);
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .ai-sidebar {
             position: fixed;
-            right: 0;
-            top: 0;
-            height: 100%;
+            right: 0; top: 0; height: 100%;
             width: 400px;
             background: #020617;
             border-left: 1px solid #1e293b;
             transform: translateX(100%);
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 100;
+            z-index: 1000;
         }
 
         .ai-sidebar.active { transform: translateX(0); }
 
-        .loader {
-            border: 2px solid #1e293b;
-            border-top: 2px solid var(--accent);
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
+        .btn-glow {
+            box-shadow: 0 0 15px var(--accent-soft);
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .btn-glow:hover {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.3);
+            filter: brightness(1.1);
+        }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
-    <!-- 
-        NARRATIVE:
-        A cross-sector institutional dashboard for professional research pairs.
-        Allows for company-to-company comparison within a selected sector.
-        Integration with Gemini 2.5 Flash for real-time concept auditing.
-
-        DESIGN: "Professional & Stylish" (Dark Mode, High Contrast).
-        CONFIRMATION: NO SVG, NO MERMAID JS.
-    -->
 </head>
 <body class="selection:bg-cyan-500/30">
 
-    <!-- Gemini AI Sidebar -->
+    <!-- AI Sidebar -->
     <aside id="aiSidebar" class="ai-sidebar p-6 flex flex-col shadow-2xl">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                <span>✦</span> Analyst AI
-            </h2>
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-xl font-black text-cyan-400">RESEARCH TERMINAL</h2>
             <button onclick="toggleAI(false)" class="text-2xl text-slate-500 hover:text-white">&times;</button>
         </div>
-        <div id="aiOutput" class="flex-1 overflow-y-auto space-y-4 text-sm leading-relaxed text-slate-300 pr-2">
-            <p class="italic text-slate-500 text-center mt-10">Highlight text or data points to trigger deep research.</p>
+        <div id="aiOutput" class="flex-1 overflow-y-auto space-y-4 text-sm leading-relaxed text-slate-300">
+            <p class="text-slate-500 italic text-center mt-20">Select any metric or text to audit with Gemini AI.</p>
         </div>
-        <div id="aiLoading" class="hidden py-6 flex flex-col items-center gap-3">
-            <div class="loader"></div>
-            <p class="text-[10px] text-cyan-500 uppercase font-bold tracking-widest">Consulting Knowledge Graph...</p>
-        </div>
-        <div class="mt-4 pt-4 border-t border-slate-800 text-[10px] text-slate-500 uppercase">
-            Sovereign Research Node: ACTIVE
+        <div id="aiLoader" class="hidden py-6 flex flex-col items-center gap-2">
+            <div class="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-[10px] text-cyan-500 font-bold uppercase mt-2">Connecting to Knowledge Node...</p>
         </div>
     </aside>
 
     <div class="flex flex-col lg:flex-row min-h-screen">
         
-        <!-- Sector Sidebar -->
-        <nav class="w-full lg:w-72 p-6 border-r border-slate-900 bg-slate-950/50 sidebar-nav">
-            <div class="mb-10">
-                <h1 class="text-2xl font-extrabold tracking-tighter text-white">SECTOR<span class="text-cyan-400">HUB</span></h1>
-                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Collaborative Intelligence</p>
+        <!-- Sidebar Navigation -->
+        <nav class="w-full lg:w-80 p-6 border-r border-slate-900 flex flex-col sticky top-0 h-screen">
+            <div class="mb-8">
+                <h1 class="text-3xl font-black tracking-tighter text-white">SECTOR<span class="text-cyan-400">HUB</span></h1>
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Live Institutional Research</p>
             </div>
 
-            <div class="mb-6">
-                <label class="text-[10px] font-bold text-slate-500 uppercase mb-2 block">AI Gateway Key</label>
-                <input type="password" id="apiKey" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="Gemini API Key...">
+            <!-- Integration Controls -->
+            <div class="space-y-4 mb-10">
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase">Google Sheet CSV URL</label>
+                    <input type="text" id="csvUrl" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="Paste .csv link here...">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase">Gemini API Key</label>
+                    <input type="password" id="apiKey" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="Enter API Key...">
+                </div>
+                <button onclick="fetchSheetData()" class="w-full bg-cyan-600 text-white font-bold py-2 rounded text-xs btn-glow">Sync Master Sheet</button>
             </div>
 
-            <div class="space-y-2">
-                <div class="nav-item active" onclick="switchSector('quantum', this)">⚛️ Quantum Computing</div>
-                <div class="nav-item" onclick="switchSector('metals', this)">⛏️ Precious Metals</div>
-                <div class="nav-item" onclick="switchSector('space', this)">🚀 Space & Rockets</div>
-                <div class="nav-item" onclick="switchSector('energy', this)">☢️ Next-Gen Energy</div>
-                <div class="nav-item" onclick="switchSector('biotech', this)">🧬 Bio-Tech / Pharma</div>
+            <!-- Sector Menu -->
+            <div class="space-y-1" id="sectorList">
+                <div class="text-[9px] font-black text-slate-600 uppercase mb-2">Available Sectors</div>
+                <!-- Populated via JS -->
             </div>
 
-            <div class="mt-auto pt-10 text-[10px] text-slate-600 leading-relaxed uppercase tracking-tighter">
-                Click a sector to load the latest collaborative dataset from your research.
+            <div class="mt-auto p-4 bg-slate-900/50 rounded-xl border border-white/5 text-[10px] text-slate-500">
+                <p>This terminal fetches live data from your collaborative Google Sheet. Highlight data to query the AI Auditor.</p>
             </div>
         </nav>
 
-        <!-- Main Dashboard Area -->
-        <main class="flex-1 p-6 lg:p-10">
+        <!-- Content Area -->
+        <main class="flex-1 p-6 lg:p-12 max-w-7xl">
             
-            <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
-                <div>
-                    <h2 id="currentSectorTitle" class="text-4xl font-extrabold tracking-tight">Quantum Computing</h2>
-                    <p class="text-slate-400 mt-1">Leading companies, technical moats, and financial stability comparison.</p>
-                </div>
-                <div class="flex gap-4">
-                    <div class="glass-card px-4 py-2 text-center min-w-[100px]">
-                        <p class="text-[9px] font-bold text-slate-500 uppercase">Sector Beta</p>
-                        <p class="text-lg font-bold">1.84</p>
-                    </div>
-                    <div class="glass-card px-4 py-2 text-center min-w-[100px]">
-                        <p class="text-[9px] font-bold text-slate-500 uppercase">Growth Stage</p>
-                        <p class="text-lg font-bold text-cyan-400">Early</p>
-                    </div>
-                </div>
+            <header class="mb-12">
+                <h2 id="sectorTitle" class="text-5xl font-black tracking-tight text-white mb-2">Sync Data to Start</h2>
+                <p id="sectorDesc" class="text-slate-400 text-lg">Load your published CSV to begin deep comparison.</p>
             </header>
 
-            <!-- Comparative Charts -->
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
+                <!-- Chart 1: Valuation -->
                 <div class="glass-card p-6">
-                    <h3 class="text-lg font-bold mb-6 flex justify-between">
-                        Valuation Multiples (EV/Rev)
-                        <span class="text-xs text-slate-500 font-normal">Industry Benchmark: 8.5x</span>
-                    </h3>
+                    <h3 class="text-sm font-bold uppercase text-slate-500 mb-6 tracking-widest">Comparative Valuation (EV/Revenue)</h3>
                     <div class="chart-container">
-                        <canvas id="valuationChart"></canvas>
+                        <canvas id="valChart"></canvas>
                     </div>
                 </div>
+                <!-- Chart 2: Bubble Comparison -->
                 <div class="glass-card p-6">
-                    <h3 class="text-lg font-bold mb-6 flex justify-between">
-                        Fidelity vs. Scale (The Moat)
-                        <span class="text-xs text-slate-500 font-normal italic">Higher/Right is Optimal</span>
-                    </h3>
+                    <h3 class="text-sm font-bold uppercase text-slate-500 mb-6 tracking-widest">Quality (Fidelity) vs. Quantity (Scale)</h3>
                     <div class="chart-container">
-                        <canvas id="moatBubbleChart"></canvas>
+                        <canvas id="bubbleChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- The Leaderboard Table -->
+            <!-- Leaderboard -->
             <div class="glass-card overflow-hidden">
                 <div class="p-6 border-b border-slate-800 flex justify-between items-center">
-                    <h3 class="text-xl font-bold">Sector Comparison Matrix</h3>
-                    <div class="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Last Updated: Today 14:20</div>
+                    <h3 class="text-xl font-black">Strategic Leaderboard</h3>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm" id="leaderboard">
-                        <thead class="bg-slate-900/50 text-slate-500 uppercase text-[10px] font-bold">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/50 text-[10px] font-bold uppercase text-slate-500">
                             <tr>
                                 <th class="p-4">Company</th>
-                                <th class="p-4">Ticker</th>
-                                <th class="p-4 text-center">Moat Score</th>
-                                <th class="p-4 text-center">P/E Ratio</th>
+                                <th class="p-4">Moat Score</th>
+                                <th class="p-4 text-center">P/E</th>
                                 <th class="p-4 text-center">Cash (M)</th>
-                                <th class="p-4">Outlook</th>
+                                <th class="p-4">Strategy</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800 text-slate-300" id="tableBody">
-                            <!-- Dynamic Content -->
+                        <tbody id="tableBody" class="divide-y divide-slate-800 text-slate-300">
+                            <!-- Populated via JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- AI Highlight Trigger -->
-            <button id="aiBtn" class="fixed hidden bg-cyan-500 text-white font-bold px-4 py-2 rounded-full shadow-2xl z-50 text-xs flex items-center gap-2 hover:scale-105 transition-transform">
-                ✨ Research with Gemini
-            </button>
+            <button id="aiBtn" class="fixed hidden bg-cyan-500 text-white font-black px-5 py-2 rounded-full shadow-2xl z-50 text-[11px] uppercase tracking-tighter btn-glow">✨ AI Audit</button>
 
-            <footer class="mt-20 pt-10 border-t border-slate-900 text-center text-[10px] text-slate-600 uppercase tracking-widest">
-                © 2026 Collaborative Sector Research Terminal • Powered by Gemini 2.5 Flash
+            <footer class="mt-20 py-10 border-t border-slate-900 text-center text-[10px] text-slate-700 uppercase tracking-widest">
+                Confidential Research Group Node v4.0 • Zero SVG • Zero Mermaid
             </footer>
         </main>
     </div>
 
     <script>
-        /**
-         * 1. SECTOR DATA REPOSITORY
-         * In a real production environment, you would use fetch() to pull 
-         * this from a Google Sheets CSV output link.
-         */
-        const sectorData = {
-            quantum: {
-                title: "Quantum Computing",
-                desc: "Trapped-Ion, Superconducting, and Photonics architectures.",
-                companies: [
-                    { name: "IonQ", ticker: "IONQ", moat: 92, pe: "N/A", cash: 380, outlook: "Bullish: Scaling AQ 64" },
-                    { name: "Rigetti", ticker: "RGTI", moat: 65, pe: "N/A", cash: 102, outlook: "Neutral: Fabrication struggles" },
-                    { name: "D-Wave", ticker: "QBTS", moat: 70, pe: "N/A", cash: 85, outlook: "Bearish: Annealing limits" },
-                    { name: "Honeywell (Q)", ticker: "PRIVATE", moat: 95, pe: "N/A", cash: 5000, outlook: "Bullish: High fidelity" }
-                ],
-                valuation: [28.4, 12.2, 8.5, 20.0],
-                bubbles: [
-                    { label: 'IonQ', x: 36, y: 99.9, r: 15 },
-                    { label: 'IBM', x: 133, y: 98.2, r: 30 },
-                    { label: 'Rigetti', x: 84, y: 97.0, r: 10 }
-                ]
-            },
-            metals: {
-                title: "Precious Metals",
-                desc: "Strategic miners, gold/silver producers, and explorers.",
-                companies: [
-                    { name: "Barrick Gold", ticker: "GOLD", moat: 85, pe: "18.5", cash: 4200, outlook: "Stable: High production" },
-                    { name: "First Majestic", ticker: "AG", moat: 70, pe: "N/A", cash: 240, outlook: "Volatility: Silver sensitivity" }
-                ],
-                valuation: [1.8, 2.5],
-                bubbles: [
-                    { label: 'Barrick', x: 25, y: 15, r: 35 },
-                    { label: 'Agnico', x: 30, y: 18, r: 25 }
-                ]
-            }
-        };
+        let fullData = [];
+        let charts = {};
 
-        /**
-         * 2. CHART CONFIGURATIONS (MANDATORY WRAPPING & TOOLTIPS)
-         */
-        let vChart, bChart;
+        // MANDATORY: Tooltip & Label Wrapping
         const wrap = (s) => s.length > 16 ? [s.slice(0, 16), s.slice(16)] : s;
-        const tooltipConfig = {
+        const ttConfig = {
             plugins: {
                 tooltip: {
                     callbacks: {
                         title: (items) => {
-                            const label = items[0].chart.data.labels[items[0].dataIndex];
+                            const label = items[0].chart.data.labels?.[items[0].dataIndex] || "";
                             return Array.isArray(label) ? label.join(' ') : label;
                         }
                     }
@@ -289,110 +191,127 @@
             }
         };
 
-        function initCharts(sector) {
-            const data = sectorData[sector];
-            const ctxV = document.getElementById('valuationChart').getContext('2d');
-            const ctxB = document.getElementById('moatBubbleChart').getContext('2d');
+        async function fetchSheetData() {
+            const url = document.getElementById('csvUrl').value;
+            if (!url) { alert("Please paste the Published CSV URL."); return; }
 
-            if (vChart) vChart.destroy();
-            if (bChart) bChart.destroy();
+            try {
+                const response = await fetch(url);
+                const csvText = await response.text();
+                const rows = csvText.split('\n').map(row => row.split(','));
+                
+                // Parse CSV rows to objects (Skipping header)
+                fullData = rows.slice(1).map(r => ({
+                    sector: r[0], company: r[1], ticker: r[2], moat: r[3], pe: r[4], 
+                    cash: r[5], evRev: r[6], metricA: r[7], metricB: r[8], outlook: r[9]
+                })).filter(r => r.sector);
 
-            vChart = new Chart(ctxV, {
+                populateSectorMenu();
+                loadSector(fullData[0].sector);
+            } catch (err) {
+                alert("Error fetching data. Ensure the Sheet is 'Published to Web' as a CSV.");
+            }
+        }
+
+        function populateSectorMenu() {
+            const sectors = [...new Set(fullData.map(d => d.sector))];
+            const menu = document.getElementById('sectorList');
+            menu.innerHTML = sectors.map(s => `
+                <div class="px-4 py-2 rounded cursor-pointer hover:bg-slate-900 text-slate-400 text-xs transition-all sector-nav-item" onclick="loadSector('${s}', this)">
+                    ${s}
+                </div>
+            `).join('');
+            menu.querySelector('.sector-nav-item').classList.add('bg-cyan-500/10', 'text-cyan-400', 'border', 'border-cyan-500/20');
+        }
+
+        function loadSector(sectorName, el) {
+            if (el) {
+                document.querySelectorAll('.sector-nav-item').forEach(i => i.className = i.className.replace(/bg-cyan-500.*/, ''));
+                el.classList.add('bg-cyan-500/10', 'text-cyan-400', 'border', 'border-cyan-500/20');
+            }
+
+            const data = fullData.filter(d => d.sector === sectorName);
+            document.getElementById('sectorTitle').innerText = sectorName;
+            
+            // Update Table
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = data.map(d => `
+                <tr class="hover:bg-slate-900/40 transition-colors">
+                    <td class="p-4 font-bold text-white">${d.company} <span class="text-[9px] text-slate-500 mono ml-1">${d.ticker}</span></td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-cyan-500 h-full" style="width: ${d.moat}%"></div>
+                            </div>
+                            <span class="text-[10px] mono text-slate-500">${d.moat}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 text-center mono text-[10px]">${d.pe}</td>
+                    <td class="p-4 text-center font-bold text-cyan-400">$${d.cash}M</td>
+                    <td class="p-4 text-xs italic text-slate-500">${d.outlook}</td>
+                </tr>
+            `).join('');
+
+            updateCharts(data);
+        }
+
+        function updateCharts(data) {
+            // Valuation Chart
+            if (charts.val) charts.val.destroy();
+            charts.val = new Chart(document.getElementById('valChart'), {
                 type: 'bar',
                 data: {
-                    labels: data.companies.map(c => wrap(c.name)),
+                    labels: data.map(d => wrap(d.company)),
                     datasets: [{
                         label: 'EV/Revenue',
-                        data: data.valuation,
+                        data: data.map(d => parseFloat(d.evRev) || 0),
                         backgroundColor: '#06b6d4',
-                        borderRadius: 6
+                        borderRadius: 4
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                        x: { grid: { display: false }, ticks: { color: '#64748b' } }
-                    },
-                    plugins: { ...tooltipConfig.plugins, legend: { display: false } }
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } },
+                    plugins: { ...ttConfig.plugins, legend: { display: false } }
                 }
             });
 
-            bChart = new Chart(ctxB, {
+            // Bubble Chart (Fidelity vs Qubits - mocked from Metric A/B columns)
+            if (charts.bubble) charts.bubble.destroy();
+            charts.bubble = new Chart(document.getElementById('bubbleChart'), {
                 type: 'bubble',
                 data: {
-                    datasets: data.bubbles.map((b, i) => ({
-                        label: b.label,
-                        data: [b],
+                    datasets: data.map((d, i) => ({
+                        label: d.company,
+                        data: [{ x: parseInt(d.metricA) || 50, y: parseFloat(d.metricB) || 98, r: 15 }],
                         backgroundColor: i === 0 ? 'rgba(6, 182, 212, 0.7)' : 'rgba(139, 92, 246, 0.5)'
                     }))
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
-                    },
-                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { grid: { color: '#1e293b' } }, y: { grid: { color: '#1e293b' } } },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, color: '#64748b', font: { size: 9 } } } }
                 }
             });
         }
 
         /**
-         * 3. DYNAMIC UI LOGIC
-         */
-        function switchSector(sectorKey, element) {
-            // Update UI Sidebar
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-
-            const data = sectorData[sectorKey];
-            if (!data) { alert("Sector data coming soon in the collaborative sheet!"); return; }
-
-            // Update Header
-            document.getElementById('currentSectorTitle').innerText = data.title;
-
-            // Update Table
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = data.companies.map(c => `
-                <tr class="hover:bg-slate-900/40 transition-colors">
-                    <td class="p-4 font-bold text-white">${c.name}</td>
-                    <td class="p-4 mono text-xs">${c.ticker}</td>
-                    <td class="p-4 text-center">
-                        <div class="w-full bg-slate-800 h-1.5 rounded-full">
-                            <div class="bg-cyan-500 h-full rounded-full" style="width: ${c.moat}%"></div>
-                        </div>
-                    </td>
-                    <td class="p-4 text-center mono text-xs">${c.pe}</td>
-                    <td class="p-4 text-center text-cyan-400 font-bold">$${c.cash}M</td>
-                    <td class="p-4 italic text-xs text-slate-400">${c.outlook}</td>
-                </tr>
-            `).join('');
-
-            initCharts(sectorKey);
-        }
-
-        /**
-         * 4. GEMINI API INTEGRATION
+         * AI LOGIC
          */
         const aiSidebar = document.getElementById('aiSidebar');
         const aiOutput = document.getElementById('aiOutput');
-        const aiLoading = document.getElementById('aiLoading');
+        const aiLoader = document.getElementById('aiLoader');
         const aiBtn = document.getElementById('aiBtn');
         let selectedText = "";
 
         document.addEventListener('mouseup', (e) => {
             const selection = window.getSelection().toString().trim();
-            if (selection.length > 5) {
+            if (selection.length > 4) {
                 selectedText = selection;
                 aiBtn.style.left = `${e.pageX}px`;
                 aiBtn.style.top = `${e.pageY - 40}px`;
-                aiBtn.style.display = 'flex';
-            } else {
-                aiBtn.style.display = 'none';
-            }
+                aiBtn.style.display = 'block';
+            } else { aiBtn.style.display = 'none'; }
         });
 
         aiBtn.addEventListener('click', () => {
@@ -401,19 +320,17 @@
             callGemini(selectedText);
         });
 
-        function toggleAI(show) {
-            aiSidebar.classList.toggle('active', show);
-        }
+        function toggleAI(s) { aiSidebar.classList.toggle('active', s); }
 
         async function callGemini(concept) {
             const key = document.getElementById('apiKey').value;
-            if (!key) { alert("Please input your Gemini API Key in the sidebar."); return; }
-
+            if (!key) { alert("Enter API Key first."); return; }
+            
             aiOutput.innerHTML = "";
-            aiLoading.classList.remove('hidden');
+            aiLoader.classList.remove('hidden');
 
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
-            const prompt = `You are a world-class equity analyst. Explain this concept specifically as it relates to stock market research and sector analysis: "${concept}". Be concise, professional, and highlight the investment risk/reward.`;
+            const prompt = `Explain this concept specifically regarding investment research: "${concept}". Focus on risk and technical moat. Be brief.`;
 
             try {
                 const res = await fetch(url, {
@@ -423,22 +340,13 @@
                 });
                 const data = await res.json();
                 const text = data.candidates[0].content.parts[0].text;
-                
-                aiLoading.classList.add('hidden');
-                aiOutput.innerHTML = `
-                    <div class="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded text-[11px] mb-4">
-                        <span class="text-cyan-400 font-bold uppercase">Topic:</span> ${concept}
-                    </div>
-                    ${text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong class="text-cyan-400">$1</strong>')}
-                `;
+                aiLoader.classList.add('hidden');
+                aiOutput.innerHTML = `<div class='bg-cyan-900/20 p-4 border border-cyan-500/20 rounded mb-4'><span class='text-[10px] font-black text-cyan-500 uppercase'>Term:</span><br><span class='text-white font-bold'>${concept}</span></div>${text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong class="text-cyan-400">$1</strong>')}`;
             } catch (err) {
-                aiLoading.classList.add('hidden');
-                aiOutput.innerHTML = "<p class='text-red-400'>Error connecting to Gemini API. Check key and network.</p>";
+                aiLoader.classList.add('hidden');
+                aiOutput.innerHTML = "Error connecting to Gemini Core.";
             }
         }
-
-        // Initialize on load
-        window.onload = () => switchSector('quantum', document.querySelector('.nav-item'));
     </script>
 </body>
 </html>
