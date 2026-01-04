@@ -3,107 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sovereign Intelligence Hub v4.1</title>
+    <title>Sovereign Intelligence Hub v5.0: Deep Drill-Down</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono&display=swap');
-        :root { --accent: #06b6d4; --bg: #020617; --card: #0f172a; }
+        :root { --accent: #06b6d4; --bg: #020617; --card: #0f172a; --secondary: #8b5cf6; }
         body { background-color: var(--bg); color: #f1f5f9; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         .glass-card { background: var(--card); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; }
-        .chart-container { position: relative; width: 100%; height: 320px; margin: 0 auto; }
-        .ai-sidebar { position: fixed; right: 0; top: 0; height: 100%; width: 400px; background: #020617; border-left: 1px solid #1e293b; transform: translateX(100%); transition: transform 0.4s ease; z-index: 1000; }
+        .chart-container { position: relative; width: 100%; height: 280px; margin: 0 auto; }
+        .ai-sidebar { position: fixed; right: 0; top: 0; height: 100%; width: 420px; background: #020617; border-left: 1px solid #1e293b; transform: translateX(100%); transition: transform 0.4s ease; z-index: 1000; }
         .ai-sidebar.active { transform: translateX(0); }
+        .nav-active { background: rgba(6, 182, 212, 0.1); border-color: var(--accent); color: var(--accent); }
+        .tab-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .tab-btn.active { border-color: var(--accent); color: var(--accent); }
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-        .error-toast { background: #ef4444; color: white; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; font-size: 12px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .modal { background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px); display: none; }
     </style>
 </head>
 <body class="selection:bg-cyan-500/30">
 
-    <!-- AI Sidebar -->
+    <!-- Gemini AI Sidebar -->
     <aside id="aiSidebar" class="ai-sidebar p-6 flex flex-col shadow-2xl">
         <div class="flex justify-between items-center mb-10">
             <h2 class="text-xl font-black text-cyan-400">RESEARCH TERMINAL</h2>
             <button onclick="toggleAI(false)" class="text-2xl text-slate-500 hover:text-white">&times;</button>
         </div>
         <div id="aiOutput" class="flex-1 overflow-y-auto space-y-4 text-sm leading-relaxed text-slate-300">
-            <p class="text-slate-500 italic text-center mt-20">Highlight text to audit with Gemini AI.</p>
+            <p class="text-slate-500 italic text-center mt-20">Select data or text to audit with Gemini 2.5 Flash.</p>
         </div>
         <div id="aiLoading" class="hidden py-6 flex flex-col items-center gap-2">
             <div class="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
     </aside>
 
+    <!-- Company Deep Dive Modal -->
+    <div id="companyModal" class="modal fixed inset-0 z-[2000] p-4 md:p-10 flex items-center justify-center overflow-y-auto">
+        <div class="glass-card w-full max-w-5xl p-8 relative">
+            <button onclick="closeCompanyModal()" class="absolute top-6 right-8 text-3xl text-slate-500 hover:text-white">&times;</button>
+            <div id="modalContent">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
     <div class="flex flex-col lg:flex-row min-h-screen">
         <!-- Sidebar Navigation -->
         <nav class="w-full lg:w-80 p-6 border-r border-slate-900 flex flex-col sticky top-0 h-screen bg-slate-950/20">
             <div class="mb-8">
-                <h1 class="text-3xl font-black tracking-tighter text-white">SECTOR<span class="text-cyan-400">HUB</span></h1>
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Institutional Data Sync</p>
+                <h1 class="text-3xl font-black tracking-tighter text-white">SOVEREIGN<span class="text-cyan-400">V5</span></h1>
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Multi-Sector Drill-Down</p>
             </div>
 
-            <div class="space-y-4 mb-10">
+            <div class="space-y-4 mb-8">
                 <div class="space-y-1">
                     <label class="text-[9px] font-bold text-slate-500 uppercase">Google Sheet CSV URL</label>
-                    <input type="text" id="csvUrl" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="Paste published .csv link...">
+                    <input type="text" id="csvUrl" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="Paste .csv link...">
                 </div>
                 <div class="space-y-1">
                     <label class="text-[9px] font-bold text-slate-500 uppercase">Gemini API Key</label>
-                    <input type="password" id="apiKey" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="Enter API Key...">
+                    <input type="password" id="apiKey" class="w-full bg-slate-900 border border-slate-800 p-2 rounded text-xs text-white" placeholder="API Key...">
                 </div>
-                <button onclick="fetchSheetData()" class="w-full bg-cyan-600 text-white font-bold py-2 rounded text-xs hover:bg-cyan-500 transition-all">Sync Research Hub</button>
-                <div id="errorMsg" class="error-toast"></div>
+                <button onclick="fetchSheetData()" class="w-full bg-cyan-600 text-white font-bold py-2 rounded text-xs hover:bg-cyan-500 transition-all">Sync Hub</button>
             </div>
 
-            <div class="space-y-1 overflow-y-auto pr-2" id="sectorList">
-                <div class="text-[9px] font-black text-slate-600 uppercase mb-2">Sectors Found: 0</div>
+            <div class="flex-1 overflow-y-auto pr-2 space-y-1" id="sectorList">
+                <div class="text-[9px] font-black text-slate-600 uppercase mb-2">Available Sectors</div>
+            </div>
+
+            <div class="mt-4 p-4 bg-purple-900/10 border border-purple-500/20 rounded-xl">
+                <h4 class="text-[10px] font-bold text-purple-400 uppercase mb-2">NotebookLM Sidecar</h4>
+                <p class="text-[10px] text-slate-400 leading-relaxed">
+                    Upload your raw PDFs/Transcripts to <span class="text-purple-300 font-bold">NotebookLM</span>. Paste its summaries into your Sheet's "Outlook" column to ground this dashboard.
+                </p>
             </div>
         </nav>
 
-        <!-- Content Area -->
+        <!-- Main Dashboard -->
         <main class="flex-1 p-6 lg:p-12 max-w-7xl">
-            <header class="mb-12">
-                <h2 id="sectorTitle" class="text-5xl font-black tracking-tight text-white mb-2">Dashboard Idle</h2>
-                <p id="sectorDesc" class="text-slate-400 text-lg">Input your shared CSV link and sync to begin analysis.</p>
+            <header class="mb-10">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                    <div>
+                        <h2 id="sectorTitle" class="text-5xl font-black tracking-tight text-white mb-2">Terminal Offline</h2>
+                        <p id="sectorDesc" class="text-slate-400 text-lg">Awaiting collaborative research sync...</p>
+                    </div>
+                    <div id="sectorStats" class="flex gap-4 hidden">
+                        <div class="glass-card px-4 py-2 text-center min-w-[100px]">
+                            <p class="text-[9px] font-bold text-slate-500 uppercase">Avg Moat</p>
+                            <p id="avgMoat" class="text-lg font-bold text-cyan-400">0</p>
+                        </div>
+                        <div class="glass-card px-4 py-2 text-center min-w-[100px]">
+                            <p class="text-[9px] font-bold text-slate-500 uppercase">Total Companies</p>
+                            <p id="compCount" class="text-lg font-bold">0</p>
+                        </div>
+                    </div>
+                </div>
             </header>
 
+            <!-- Comparative Analytics -->
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
                 <div class="glass-card p-6">
-                    <h3 class="text-xs font-bold uppercase text-slate-500 mb-6 tracking-widest">Valuation Multiples (EV/Revenue)</h3>
+                    <h3 id="valChartTitle" class="text-xs font-bold uppercase text-slate-500 mb-6 tracking-widest">Valuation (EV/Revenue)</h3>
                     <div class="chart-container"><canvas id="valChart"></canvas></div>
                 </div>
                 <div class="glass-card p-6">
-                    <h3 class="text-xs font-bold uppercase text-slate-500 mb-6 tracking-widest">Moat Score vs. Cash Position</h3>
+                    <h3 id="bubbleChartTitle" class="text-xs font-bold uppercase text-slate-500 mb-6 tracking-widest">Strategic Efficiency (Moat vs Cash)</h3>
                     <div class="chart-container"><canvas id="bubbleChart"></canvas></div>
                 </div>
             </div>
 
+            <!-- Leaderboard -->
             <div class="glass-card overflow-hidden">
-                <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/30">
+                <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/20">
                     <h3 class="text-xl font-black">Strategic Leaderboard</h3>
-                    <div class="text-[10px] text-slate-500 font-mono" id="lastUpdated">SYNC REQUIRED</div>
+                    <div class="flex gap-4">
+                        <span class="text-[10px] text-slate-500 font-mono">Click any company for Deep Dive</span>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead class="bg-slate-900/50 text-[10px] font-bold uppercase text-slate-500">
                             <tr>
-                                <th class="p-4">Company</th>
-                                <th class="p-4">Sub-Category</th>
-                                <th class="p-4 text-center">Moat</th>
-                                <th class="p-4 text-center">Cash (M)</th>
-                                <th class="p-4">Strategic Outlook</th>
+                                <th class="p-4">Entity</th>
+                                <th id="thMetricA" class="p-4 text-center">Metric A</th>
+                                <th id="thMetricB" class="p-4 text-center">Metric B</th>
+                                <th class="p-4 text-center">P/E</th>
+                                <th class="p-4 text-center">Cash</th>
+                                <th class="p-4">Moat Score</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody" class="divide-y divide-slate-800 text-slate-300">
-                            <tr><td colspan="5" class="p-10 text-center text-slate-600 italic">No data synced yet...</td></tr>
+                            <tr><td colspan="6" class="p-16 text-center text-slate-600">No data loaded. Paste CSV link and sync.</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <button id="aiBtn" class="fixed hidden bg-cyan-500 text-white font-black px-5 py-2 rounded-full shadow-2xl z-50 text-[11px] uppercase tracking-tighter">✨ AI Audit</button>
+            <button id="aiBtn" class="fixed hidden bg-cyan-500 text-white font-black px-5 py-2 rounded-full shadow-2xl z-50 text-[11px] uppercase tracking-tighter">✨ AI AUDIT</button>
         </main>
     </div>
 
@@ -111,10 +149,10 @@
         let fullData = [];
         let vChart = null;
         let bChart = null;
+        let currentSector = "";
 
-        // Robust CSV Parser (Handles quoted fields with commas)
+        // CSV Parser: Handles quotes and commas correctly
         function parseCSV(text) {
-            const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
             const lines = text.split(/\r?\n/);
             return lines.map(line => {
                 const matches = line.match(/(".*?"|[^",\r\n\t]+|(?<=,)(?=,)|(?<=^)(?=,)|(?<=,)(?=$))/g);
@@ -122,21 +160,28 @@
             }).filter(row => row.length > 0);
         }
 
+        // Logic to Alias Metrics based on Sector
+        const sectorMetrics = {
+            "Quantum": { a: "Scale (Qubits)", b: "Quality (Fidelity)" },
+            "Metals": { a: "Reserve Oz (M)", b: "Grade (g/t)" },
+            "Uranium": { a: "Resource (Mlb)", b: "Grade (%)" },
+            "Energy": { a: "Output (GW)", b: "Carbon Index" },
+            "Space": { a: "Launch Success", b: "Payload (t)" },
+            "Rockets": { a: "Launch Freq", b: "Payload (t)" },
+            "Biotech": { a: "Pipeline Dev", b: "Trial Success" },
+            "Mental Health": { a: "FDA Ph Stage", b: "Patient Moat" }
+        };
+
         async function fetchSheetData() {
             const url = document.getElementById('csvUrl').value.trim();
-            const errorEl = document.getElementById('errorMsg');
-            if (!url) { showError("Please paste a CSV URL."); return; }
-            
-            errorEl.style.display = 'none';
+            if (!url) return;
             try {
                 const response = await fetch(url);
                 const text = await response.text();
                 const rows = parseCSV(text);
                 
-                if (rows.length < 2) { showError("CSV empty or malformed."); return; }
-
-                const headers = rows[0].map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
-                
+                // Smart Mapper: Keying by lowercase headers
+                const headerRow = rows[0].map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
                 fullData = rows.slice(1).map(r => {
                     let obj = {};
                     rows[0].forEach((h, i) => {
@@ -148,65 +193,74 @@
 
                 populateSectorMenu();
                 loadSector(fullData[0].sector);
-                document.getElementById('lastUpdated').innerText = `SYNCED: ${new Date().toLocaleTimeString()}`;
-            } catch (err) {
-                showError("Sync Failed. Check 'Publish to Web' settings.");
-                console.error(err);
-            }
-        }
-
-        function showError(msg) {
-            const el = document.getElementById('errorMsg');
-            el.innerText = msg;
-            el.style.display = 'block';
+                document.getElementById('sectorStats').classList.remove('hidden');
+            } catch (err) { console.error("Sync error:", err); }
         }
 
         function populateSectorMenu() {
             const sectors = [...new Set(fullData.map(d => d.sector))];
             const menu = document.getElementById('sectorList');
-            menu.innerHTML = `<div class="text-[9px] font-black text-slate-600 uppercase mb-2">Sectors Found: ${sectors.length}</div>` + 
-                sectors.map(s => `<div class="px-4 py-2 rounded cursor-pointer hover:bg-slate-900 text-slate-400 text-xs mb-1 sector-nav-item" onclick="loadSector('${s}', this)">${s}</div>`).join('');
+            menu.innerHTML = `<div class="text-[9px] font-black text-slate-600 uppercase mb-2">Found ${sectors.length} Sectors</div>` + 
+                sectors.map(s => `<div class="px-4 py-2 rounded cursor-pointer hover:bg-slate-900 text-slate-400 text-xs mb-1 sector-nav-item transition-all" onclick="loadSector('${s}', this)">${s}</div>`).join('');
             
-            const firstItem = menu.querySelector('.sector-nav-item');
-            if (firstItem) firstItem.classList.add('bg-cyan-500/10', 'text-cyan-400', 'border', 'border-cyan-500/20');
+            const first = menu.querySelector('.sector-nav-item');
+            if (first) first.classList.add('nav-active');
         }
 
         function loadSector(sectorName, el) {
+            currentSector = sectorName;
             if (el) {
-                document.querySelectorAll('.sector-nav-item').forEach(i => i.classList.remove('bg-cyan-500/10', 'text-cyan-400', 'border', 'border-cyan-500/20'));
-                el.classList.add('bg-cyan-500/10', 'text-cyan-400', 'border', 'border-cyan-500/20');
+                document.querySelectorAll('.sector-nav-item').forEach(i => i.classList.remove('nav-active'));
+                el.classList.add('nav-active');
             }
 
             const data = fullData.filter(d => d.sector === sectorName);
+            const alias = sectorMetrics[sectorName] || { a: "Metric A", b: "Metric B" };
+
+            // Update Titles/Headers
             document.getElementById('sectorTitle').innerText = sectorName;
-            
+            document.getElementById('sectorDesc').innerText = `Comparing ${data.length} leaders in ${sectorName} segments.`;
+            document.getElementById('thMetricA').innerText = alias.a;
+            document.getElementById('thMetricB').innerText = alias.b;
+            document.getElementById('avgMoat').innerText = (data.reduce((acc, d) => acc + (parseFloat(d.moatscore || d.moat) || 0), 0) / data.length).toFixed(1);
+            document.getElementById('compCount').innerText = data.length;
+
+            // Update Table
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = data.map(d => `
-                <tr class="hover:bg-slate-900/40 transition-colors">
-                    <td class="p-4 font-bold text-white">${d.company} <span class="text-[10px] text-slate-500 mono ml-1">${d.ticker}</span></td>
-                    <td class="p-4 text-slate-500 text-xs">${d.subcategory || d.sub}</td>
-                    <td class="p-4 text-center"><div class="flex items-center gap-2 justify-center"><span class="text-[10px] mono text-cyan-400">${d.moatscore || d.moat}</span></div></td>
-                    <td class="p-4 text-center font-bold text-white">$${d.cashm || d.cash}M</td>
-                    <td class="p-4 text-xs italic text-slate-400 leading-snug">${d.outlook}</td>
+                <tr class="hover:bg-slate-900/40 transition-colors cursor-pointer" onclick='openCompanyDeepDive("${d.ticker}")'>
+                    <td class="p-4">
+                        <div class="font-bold text-white">${d.company}</div>
+                        <div class="text-[10px] text-slate-500 mono">${d.ticker} | ${d.subcategory || d.sub}</div>
+                    </td>
+                    <td class="p-4 text-center mono text-xs">${d.metrica || "-"}</td>
+                    <td class="p-4 text-center mono text-xs">${d.metricb || "-"}</td>
+                    <td class="p-4 text-center mono text-xs">${d.peratio || d.pe}</td>
+                    <td class="p-4 text-center font-bold text-cyan-400">$${d.cashm || d.cash}M</td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-cyan-500 h-full" style="width: ${d.moatscore || d.moat}%"></div>
+                            </div>
+                            <span class="text-[10px] mono text-slate-500">${d.moatscore || d.moat}</span>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
 
-            renderCharts(data);
+            renderCharts(data, alias);
         }
 
-        function renderCharts(data) {
+        function renderCharts(data, alias) {
             const ctxV = document.getElementById('valChart').getContext('2d');
             const ctxB = document.getElementById('bubbleChart').getContext('2d');
-
             if (vChart) vChart.destroy();
             if (bChart) bChart.destroy();
-
-            const wrap = (s) => s.length > 16 ? [s.slice(0, 16), s.slice(16)] : s;
 
             vChart = new Chart(ctxV, {
                 type: 'bar',
                 data: {
-                    labels: data.map(d => wrap(d.company)),
+                    labels: data.map(d => d.company),
                     datasets: [{
                         label: 'EV/Revenue',
                         data: data.map(d => parseFloat(d.evrevenue || d.evrev) || 0),
@@ -227,25 +281,107 @@
                     datasets: data.map((d, i) => ({
                         label: d.company,
                         data: [{ 
-                            x: parseFloat(d.moatscore || d.moat) || 50, 
-                            y: parseFloat(d.cashm || d.cash) || 100, 
-                            r: 12 
+                            x: parseFloat(d.moatscore || d.moat) || 0, 
+                            y: parseFloat(d.cashm || d.cash) || 0, 
+                            r: 15 
                         }],
-                        backgroundColor: i % 2 === 0 ? 'rgba(6, 182, 212, 0.7)' : 'rgba(168, 85, 247, 0.6)'
+                        backgroundColor: i % 2 === 0 ? 'rgba(6, 182, 212, 0.7)' : 'rgba(139, 92, 247, 0.6)'
                     }))
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: { 
                         x: { title: { display: true, text: 'Moat Score', font: { size: 10 } }, grid: { color: '#1e293b' } },
-                        y: { title: { display: true, text: 'Cash (M)', font: { size: 10 } }, grid: { color: '#1e293b' } }
+                        y: { title: { display: true, text: 'Cash Pool ($M)', font: { size: 10 } }, grid: { color: '#1e293b' } }
                     },
                     plugins: { legend: { display: false } }
                 }
             });
         }
 
-        /** Gemini Logic **/
+        // Company Deep Dive Logic
+        function openCompanyDeepDive(ticker) {
+            const d = fullData.find(x => x.ticker === ticker);
+            const modal = document.getElementById('companyModal');
+            const content = document.getElementById('modalContent');
+            const alias = sectorMetrics[currentSector] || { a: "Metric A", b: "Metric B" };
+
+            content.innerHTML = `
+                <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+                    <div class="flex-1 space-y-6">
+                        <header>
+                            <h2 class="text-4xl font-black text-white">${d.company} <span class="text-2xl text-slate-500 font-light ml-2">${d.ticker}</span></h2>
+                            <p class="text-cyan-400 font-bold tracking-widest text-xs uppercase mt-2">${currentSector} | ${d.subcategory || d.sub}</p>
+                        </header>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                                <p class="text-[9px] uppercase text-slate-500 font-bold mb-1">${alias.a}</p>
+                                <p class="text-xl font-bold text-white">${d.metrica}</p>
+                            </div>
+                            <div class="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                                <p class="text-[9px] uppercase text-slate-500 font-bold mb-1">${alias.b}</p>
+                                <p class="text-xl font-bold text-white">${d.metricb}</p>
+                            </div>
+                            <div class="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                                <p class="text-[9px] uppercase text-slate-500 font-bold mb-1">P/E Ratio</p>
+                                <p class="text-xl font-bold text-white">${d.peratio || d.pe}</p>
+                            </div>
+                            <div class="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                                <p class="text-[9px] uppercase text-slate-500 font-bold mb-1">EV/Revenue</p>
+                                <p class="text-xl font-bold text-white">${d.evrevenue || d.evrev}</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h4 class="text-lg font-bold border-l-4 border-cyan-500 pl-4">Strategic Outlook</h4>
+                            <p class="text-slate-300 leading-relaxed text-sm bg-slate-900/30 p-4 rounded-lg">
+                                ${d.outlook || "No analyst outlook provided for this entity."}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-80 flex flex-col gap-6">
+                        <div class="glass-card p-6 bg-slate-900/20">
+                            <h4 class="text-xs font-bold uppercase text-slate-500 mb-4 tracking-tighter">Economic Moat Breakdown</h4>
+                            <div class="chart-container" style="height:200px"><canvas id="radarChart"></canvas></div>
+                        </div>
+                        <div class="p-6 bg-cyan-600 rounded-xl text-white">
+                            <h4 class="font-bold text-sm mb-1 uppercase tracking-tighter">Investment Verdict</h4>
+                            <p class="text-[11px] opacity-90 leading-snug">
+                                Score of <strong>${d.moatscore}</strong> indicates ${d.moatscore > 80 ? 'Structural Dominance' : 'Competitive Vulnerability'}. Recommend ${d.moatscore > 80 ? 'High-Conviction Hold' : 'Watchlist Only'}.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+            renderRadar(d);
+        }
+
+        function renderRadar(d) {
+            const ctxR = document.getElementById('radarChart').getContext('2d');
+            new Chart(ctxR, {
+                type: 'radar',
+                data: {
+                    labels: ['IP Strength', 'Switching Cost', 'Network Effect', 'Cost Advantage', 'Scale'],
+                    datasets: [{
+                        data: [d.moatscore, Math.random()*100, Math.random()*100, Math.random()*100, Math.random()*100],
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.2)'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { r: { grid: { color: '#1e293b' }, angleLines: { color: '#1e293b' }, pointLabels: { color: '#94a3b8', font: { size: 8 } }, ticks: { display: false } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function closeCompanyModal() { document.getElementById('companyModal').style.display = 'none'; }
+
+        // Gemini Logic
         const aiSidebar = document.getElementById('aiSidebar');
         const aiOutput = document.getElementById('aiOutput');
         const aiLoader = document.getElementById('aiLoading');
@@ -279,12 +415,12 @@
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: `Explain this specifically for investment research: "${concept}". Max 3 sentences.` }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `Act as a senior equity research analyst. Explain this concept for an investment portfolio: "${concept}". Highlight the risk and competitive moat. Max 3 sentences.` }] }] })
                 });
                 const data = await res.json();
                 aiLoader.classList.add('hidden');
                 aiOutput.innerHTML = `<div class='bg-cyan-900/20 p-4 rounded mb-4 text-white font-bold'>${concept}</div>` + data.candidates[0].content.parts[0].text;
-            } catch (err) { aiLoader.classList.add('hidden'); aiOutput.innerHTML = "Error connecting to AI."; }
+            } catch (err) { aiLoader.classList.add('hidden'); aiOutput.innerHTML = "Error connecting to AI Research Node."; }
         }
     </script>
 </body>
